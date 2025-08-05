@@ -17,6 +17,13 @@ try:
 except ImportError as e:
     logging.warning(f"Multimodal dependencies not available: {e}")
     MULTIMODAL_AVAILABLE = False
+    # Create dummy imports for type checking
+    fitz = None
+    Image = None
+    pytesseract = None
+    convert_from_bytes = None
+    cv2 = None
+    np = None
 
 # Gemini imports
 from google import genai
@@ -37,7 +44,7 @@ class MultimodalService:
     def _check_ocr_availability(self) -> bool:
         """Check if OCR (Tesseract) is available."""
         try:
-            if not MULTIMODAL_AVAILABLE:
+            if not MULTIMODAL_AVAILABLE or pytesseract is None:
                 return False
             pytesseract.get_tesseract_version()
             return True
@@ -73,6 +80,9 @@ class MultimodalService:
     
     async def _extract_from_pdf(self, content: bytes, filename: str) -> Tuple[str, List[Dict]]:
         """Extract text and visual elements from PDF using PyMuPDF."""
+        if not MULTIMODAL_AVAILABLE or fitz is None:
+            raise Exception("PyMuPDF not available")
+            
         text_content = ""
         visual_elements = []
         
@@ -99,7 +109,8 @@ class MultimodalService:
                         if pix.n - pix.alpha < 4:  # Skip if not RGB/RGBA
                             # Convert to PIL Image
                             img_data = pix.tobytes("png")
-                            pil_image = Image.open(io.BytesIO(img_data))
+                            if Image is not None:
+                                pil_image = Image.open(io.BytesIO(img_data))
                             
                             # Get image bounds on page
                             img_rect = page.get_image_rects(xref)[0] if page.get_image_rects(xref) else None
@@ -112,7 +123,7 @@ class MultimodalService:
                             
                             # Extract text from image using OCR if available
                             ocr_text = ""
-                            if self.ocr_available:
+                            if self.ocr_available and pytesseract is not None:
                                 try:
                                     ocr_text = pytesseract.image_to_string(pil_image).strip()
                                 except Exception as e:
