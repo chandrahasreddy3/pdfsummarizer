@@ -111,8 +111,6 @@ class MultimodalService:
                             img_data = pix.tobytes("png")
                             if Image is not None:
                                 pil_image = Image.open(io.BytesIO(img_data))
-                            else:
-                                continue  # Skip if PIL not available
                             
                             # Get image bounds on page
                             img_rect = page.get_image_rects(xref)[0] if page.get_image_rects(xref) else None
@@ -179,10 +177,7 @@ class MultimodalService:
                 if "lines" not in block:
                     continue
                 
-                if fitz is not None:
-                    block_rect = fitz.Rect(block["bbox"])
-                else:
-                    continue
+                block_rect = fitz.Rect(block["bbox"])
                 
                 # Check if text block is near the image (within reasonable distance)
                 if (abs(block_rect.y0 - img_rect.y1) < 50 or  # Below image
